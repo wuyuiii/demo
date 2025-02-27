@@ -1,94 +1,119 @@
 import { useState } from "react"
 import "./App.css"
+
+interface TodoListType {
+	id: number
+	data: string
+	status: number
+}
+
 function App() {
-	const [todoList, setTodoList] = useState(JSON.parse(localStorage.getItem("todoList")) || [])
-	const [allTodoList, setAllTodoList] = useState(JSON.parse(localStorage.getItem("todoList")) || [])
+	const localStorageList: TodoListType[] = JSON.parse(localStorage.getItem("todoList") as string) || []
+	const [todoList, setTodoList] = useState<TodoListType[]>(localStorageList)
+	const [allTodoList, setAllTodoList] = useState<TodoListType[]>(localStorageList)
 	const [todo, setTodo] = useState("")
 	const [showClear, setShowClear] = useState(false)
+	const [active, setActive] = useState(0)
 
-  // 监听回车添加
-	const handleKeyDown = (e) => {
+	// 监听回车添加
+	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key !== "Enter") {
 			return
 		}
 		if (todo.trim() === "") {
 			return
 		}
-		const list = {
+		const list: TodoListType = {
 			id: new Date().getTime(),
 			data: todo,
 			status: 0, // 0 未完成 1 完成
 		}
-		setTodoList([...todoList, list])
-    setAllTodoList([...todoList, list])
-		setTodo("")
-		localStorage.setItem("todoList", JSON.stringify(todoList))
-	}
-
-  // 全选、反选
-	const handleChangeAllStatus = (e) => {
-    let allStatus = todoList.every((item) => item.status)
-		const newList = todoList.map((item) => {
-			return {
-				...item,
-				status: !allStatus,
-			}
-		})
+		const newList = [...todoList, list]
 		setTodoList(newList)
-    setAllTodoList(newList)
-		setShowClear(e.target.checked)
+		setAllTodoList(newList)
+		setTodo("")
 		localStorage.setItem("todoList", JSON.stringify(newList))
 	}
 
-  // 单选
-	const handleChangeStatus = (e, todo) => {
-		const newList = todoList.map((item) => {
+	// 全选、反选
+	const handleChangeAllStatus = () => {
+		let allStatus = allTodoList.every((item) => item.status)
+		const newList = allTodoList.map((item): TodoListType => {
+			return {
+				...item,
+				status: +!allStatus,
+			}
+		})
+		if (active === 1) {
+			setTodoList(newList.filter((item) => !item.status))
+		} else if (active === 2) {
+			setTodoList(newList.filter((item) => item.status))
+		} else {
+			setTodoList(newList)
+		}
+		setAllTodoList(newList)
+		setShowClear(!allStatus)
+		localStorage.setItem("todoList", JSON.stringify(newList))
+	}
+
+	// 单选
+	const handleChangeStatus = (e: React.ChangeEvent<HTMLInputElement>, todo: TodoListType) => {
+		const newList = allTodoList.map((item):TodoListType => {
 			if (item.id === todo.id) {
 				return {
 					...item,
-					status: e.target.checked ? 1 : 0,
+					status: e.target?.checked ? 1 : 0,
 				}
 			}
 			return item
 		})
-    setShowClear(newList.some((item) => item.status))
-
-		setTodoList(newList)
-    setAllTodoList(newList)
+		if (active === 1) {
+			setTodoList(newList.filter((item) => !item.status))
+		} else if (active === 2) {
+			setTodoList(newList.filter((item) => item.status))
+		} else {
+			setTodoList(newList)
+		}
+		setShowClear(newList.some((item) => item.status))
+		setAllTodoList(newList)
 		localStorage.setItem("todoList", JSON.stringify(newList))
 	}
 
-  // 删除单个
-	const handleDelTodo = (todo) => {
+	// 删除单个
+	const handleDelTodo = (todo: TodoListType) => {
 		const newList = todoList.filter((item) => {
 			return item.id !== todo.id
 		})
 		setTodoList(newList)
-    setAllTodoList(newList)
+		setAllTodoList(newList)
 		localStorage.setItem("todoList", JSON.stringify(newList))
 	}
 
-  // 删除多个
+	// 删除多个
 	const handleDelCompleted = () => {
 		const newList = todoList.filter((item) => !item.status)
 		setTodoList(newList)
-    setAllTodoList(newList)
+		setAllTodoList(newList)
 		localStorage.setItem("todoList", JSON.stringify(newList))
 	}
 
-
-  // 点击切换状态
-	const handleActive = (e) => {
-		if (e.target.tagName !== "LI") return
-		const dataset = +e.target.dataset.status
-    document.querySelector(".active").classList.remove("active")
-    e.target.classList.add("active")
+	// 点击切换状态
+	const handleActive = (e: React.MouseEvent<HTMLElement>) => {
+		if ((e.target as Element).tagName !== "LI") return
+		const dataset = Number((e.target as HTMLElement).dataset?.status)
+		document.querySelector(".active")?.classList.remove("active")
+		;(e.target as HTMLElement).classList.add("active")
 		if (dataset === 0) {
+			setActive(0)
 			setTodoList(allTodoList)
 		} else if (dataset === 1) {
-			setTodoList(allTodoList.filter((item) => !item.status))
+			const newList = allTodoList.filter((item) => !item.status)
+			setActive(1)
+			setTodoList(newList)
 		} else {
-			setTodoList(allTodoList.filter((item) => item.status))
+			const newList = allTodoList.filter((item) => item.status)
+			setActive(2)
+			setTodoList(newList)
 		}
 	}
 	return (
@@ -113,7 +138,7 @@ function App() {
 									<input
 										type="checkbox"
 										className="lisCheckbox"
-										checked={todo.status}
+										checked={Boolean(todo.status)}
 										onChange={(e) => handleChangeStatus(e, todo)}
 									/>
 									<span>{todo.data}</span>
@@ -134,7 +159,10 @@ function App() {
 			{allTodoList.length > 0 && (
 				<footer className="footer">
 					<span>{todoList.filter((item) => !item.status).length} items left</span>
-					<ul className="footerList" onClick={(e) => handleActive(e)}>
+					<ul
+						className="footerList"
+						onClick={(e: React.MouseEvent<HTMLElement>) => handleActive(e)}
+					>
 						<li className="active" data-status="0">
 							All
 						</li>
