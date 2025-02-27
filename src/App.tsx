@@ -58,7 +58,7 @@ function App() {
 
 	// 单选
 	const handleChangeStatus = (e: React.ChangeEvent<HTMLInputElement>, todo: TodoListType) => {
-		const newList = allTodoList.map((item):TodoListType => {
+		const newList = allTodoList.map((item): TodoListType => {
 			if (item.id === todo.id) {
 				return {
 					...item,
@@ -134,7 +134,7 @@ function App() {
 					<ul>
 						{todoList.map((todo) => {
 							return (
-								<li className="lis" key={todo.id}>
+								<li className={todo.status ? "completed lis" : "lis"} key={todo.id}>
 									<input
 										type="checkbox"
 										className="lisCheckbox"
